@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="BeaconMonitor.MainPage">
+
+  <VerticalStackLayout Padding="30,0" Spacing="10">
+    <Image Source="map2.bmp" Aspect="Fill" SemanticProperties.Description="world map" />
+    <HorizontalStackLayout Padding="30,0" Spacing="25" HorizontalOptions="Center" VerticalOptions="End"  >
+      <Picker x:Name="serialPortPicker" SelectedIndex="1" BackgroundColor="DarkGray" MinimumWidthRequest="60" SelectedIndexChanged="serialPortPicker_SelectedIndexChanged" />
+      <Button x:Name="startPauseButton" Text="Start" BackgroundColor="DarkGray" MinimumWidthRequest="60" SemanticProperties.Hint="Start or Pause Beacon Monitor" Clicked="OnStartPauseClicked" WidthRequest="100" />
+    </HorizontalStackLayout>
+  </VerticalStackLayout>
+
+</ContentPage>
