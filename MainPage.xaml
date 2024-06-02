@@ -1,15 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:drawable="clr-namespace:BeaconMonitor"
              x:Class="BeaconMonitor.MainPage">
-
+<!--
   <ContentPage.Resources>
     <drawable:BeaconMonitorMap x:Key="drawable" />
   </ContentPage.Resources>
-
-  <VerticalStackLayout Padding="30,0" Spacing="10">
-    <GraphicsView x:Name="canvas" Drawable="{StaticResource drawable}" HeightRequest="1000" WidthRequest="1600" />
+-->
+  <VerticalStackLayout x:Name="beaconVStackLayout" Padding="30,0" Spacing="10">
+    <!--<GraphicsView x:Name="canvas" Drawable="{StaticResource drawable}" HeightRequest="1000" WidthRequest="1600" />-->
     <HorizontalStackLayout Padding="30,0" Spacing="25" HorizontalOptions="Center" VerticalOptions="End"  >
       <Picker x:Name="serialPortPicker" SelectedIndex="1" BackgroundColor="DarkGray" MinimumWidthRequest="60" SelectedIndexChanged="serialPortPicker_SelectedIndexChanged" />
       <Button x:Name="startPauseButton" Text="Start" BackgroundColor="DarkGray" MinimumWidthRequest="60" SemanticProperties.Hint="Start or Pause Beacon Monitor" Clicked="OnStartPauseClicked" WidthRequest="100" />

@@ -1,10 +1,11 @@
-﻿using Microsoft.Maui.Graphics;
+﻿using Microsoft.UI.Dispatching;
 using Microsoft.Maui.Graphics.Platform;
-using System.Collections;
 using System.IO.Ports;
 using System.Reflection;
 
 using IImage = Microsoft.Maui.Graphics.IImage;
+
+using T41_Control;
 
 namespace BeaconMonitor;
 
@@ -12,75 +13,44 @@ namespace BeaconMonitor;
 public partial class MainPage : ContentPage
 {
   // serial port data
+  private T41Control t41Ctl;
+  //private bool dataFlag = false;
+  public bool DataFlag { get; set; }= false;
+
   private bool connectionStarted = false;
   private string selectedPort = "";
   private SerialPort? serialPort = null;
 
-  public string[] Ports { get; set; }
+  // world map control
+  private GraphicsView graphicsView;
 
+  public string[] Ports { get; set; }
+  public BeaconData beaconData;
 
   public MainPage()
   {
     InitializeComponent();
+    //this.BindingContext = this;
+
+    t41Ctl = new T41Control(this, DispatcherQueue.GetForCurrentThread());
+
+    graphicsView = new GraphicsView();
+    graphicsView.Drawable = new BeaconMonitorMap(this);
+    graphicsView.HeightRequest = 1000;
+    graphicsView.WidthRequest = 1600;
+    beaconVStackLayout.Add(graphicsView);
 
     Ports = SerialPort.GetPortNames();
     serialPortPicker.ItemsSource = Ports;
+    //graphicsView.Invalidate();
+
+    beaconData = new BeaconData();
   }
 
-  public bool Connect(string port) {
-    bool result = false;
-
-    try {
-      if (!connectionStarted && port != selectedPort) {
-        // try to connect to selected port
-        serialPort = new SerialPort();
-        serialPort.PortName = port;
-
-        // we have a USB serial port communicating at native USB speeds
-        // these aren't used
-        serialPort.BaudRate = 19200;
-        serialPort.Parity = Parity.None;
-        serialPort.DataBits = 8;
-        serialPort.DtrEnable = false;
-        serialPort.RtsEnable = false;
-
-        try {
-          serialPort.Open();
-        }
-
-        //catch (Exception ex) {
-        catch (Exception) {
-          connectionStarted = false;
-          selectedPort = "";
-          return result;
-        }
-
-        Thread.Sleep(30);
-
-        if (serialPort.IsOpen) {
-          connectionStarted = true;
-          selectedPort = port;
-          result = true;
-
-          // set T41 time
-          SetTime();
-
-        } else {
-          connectionStarted = false;
-          selectedPort = "";
-        }
-      }
-      return result;
-    }
-
-    //catch (Exception ex) {
-    catch (Exception) {
-      connectionStarted = false;
-      selectedPort = "";
-      return result;
-    }
+  public void SetBeaconData(BeaconData data) {
+    beaconData = new BeaconData(data);
+    graphicsView.Invalidate();
   }
-
 
   public void SetTime() { //long time) {
     // *** TODO: the T41 time will lag from this by the serial processing time, add a second for now ***
@@ -100,14 +70,23 @@ public partial class MainPage : ContentPage
     if(selectedIndex != -1) {
       var port = picker.ItemsSource[selectedIndex];
       if(port != null) {
-        if(Connect((string)port)) {
+        if(t41Ctl.Connect((string)port)) {
           SetTime();
         }
       }
     }
   }
 
+  // *** TODO: investigate .NET Maui property change events ***
   private void OnStartPauseClicked(object sender, EventArgs e) {
+    if(DataFlag) {
+      startPauseButton.Text = "Start";
+      DataFlag = false;
+    } else {
+      startPauseButton.Text = "Pause";
+      DataFlag = true;
+    }
+    t41Ctl.SetDataFlag();
   }
 }
 
@@ -129,6 +108,8 @@ public class Beacon {
 }
 
 public class BeaconMonitorMap : IDrawable {
+  MainPage mainPage;
+
   private bool drawStaticMapFlag = true;
   private readonly string[] beaconBandName = ["20", "17", "15", "12", "10"];
   private readonly Beacon[] beacons = [
@@ -158,7 +139,9 @@ public class BeaconMonitorMap : IDrawable {
   private readonly Color[] beaconSNRColor = [Colors.Black, Colors.LightGray, Colors.Purple, Colors.Blue, Colors.DarkCyan, Colors.Cyan, Colors.Green, Colors.Yellow, Colors.DarkOrange, Colors.Red];
 
 
-  public BeaconMonitorMap() {
+  public BeaconMonitorMap(MainPage mp) {
+    mainPage = mp;
+
     // initialize beacon SNR
     for(int j = 0; j < 18; j++) {
       for(int i = 0; i < 5; i++) {
@@ -188,7 +171,8 @@ public class BeaconMonitorMap : IDrawable {
     Assembly assembly;
 
     // draw the static part of the world map if needed
-    if(drawStaticMapFlag) {
+    //if(drawStaticMapFlag) {
+    if(true) {
       assembly = GetType().GetTypeInfo().Assembly;
       using (Stream stream = assembly.GetManifestResourceStream("BeaconMonitor.Resources.Images.world_map2.bmp")) {
         image = PlatformImage.FromStream(stream);
@@ -227,7 +211,8 @@ public class BeaconMonitorMap : IDrawable {
       // print SNR square for each monitored band
       for(int j = 0; j < 5; j++) {
         //Color color = GetSNRColor(beaconSNR[i, j]);
-        Color color = beaconSNRColor[i+j - ((i+j) >= 10 ? 10 + ((i+j) >= 20 ? 10 : 0) : 0)];
+        //Color color = beaconSNRColor[i+j - ((i+j) >= 10 ? 10 + ((i+j) >= 20 ? 10 : 0) : 0)];
+        Color color = beaconSNRColor[mainPage.beaconData.snrColors[i, j]];
 
         canvas.FillColor = color;
         if(monitorFreq[j]) {
@@ -243,7 +228,9 @@ public class BeaconMonitorMap : IDrawable {
       }
     }
 
-    int band = 0, beacon = 2, audioVolume = 30;
+    int band = mainPage.beaconData.band;
+    int beacon =  mainPage.beaconData.beacon;
+    int audioVolume =  mainPage.beaconData.volume;
     // *** TODO: move fixed items to init function and adjust what is erased ***
     canvas.FontSize = 14;
     canvas.FillColor = Colors.Black;
